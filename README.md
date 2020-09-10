@@ -16,31 +16,42 @@ git clone git@github.com:boostedsvj/svjproduction-tarballs.git
 To setup the CMSSW from scratch:
 
 ```
-python manage setup 2017 gen
-python manage setup 2017 miniaod
-python manage setup 2018 gen  # gen and miniaod are the same CMSSW version for 2018
+python manage.py setup 2016 miniaod
+python manage.py setup 2017 gen
+python manage.py setup 2017 miniaod
+python manage.py setup 2018 gen  # gen and miniaod are the same CMSSW version for 2018
 ```
 
 To update existing CMSSW directories:
 
 ```
-python manage pull 2017 \*
-python manage pull 2018 \*
+python manage.py pull 2016 miniaod
+python manage.py pull 2017 \*
+python manage.py pull 2018 \*
 ```
 
 To create tarballs:
 
 ```
-python manage tarball 2017 \*
-python manage tarball 2018 \*
+python manage.py tarball 2016 miniaod
+python manage.py tarball 2017 \*
+python manage.py tarball 2018 \*
 ```
 
 To stageout all created tarballs:
 
 ```
-python manage stageout
+python manage.py stageout
 ```
 
-### For 2016
+### For 2016 GEN-SIM
 
-Be sure to login on an `el6` node. Repeat the commands above with the year switched to 2016.
+Be sure to login on an `el6` node, or use a singularity container.
+
+```
+python manage.py setup 2016 gen
+# python manage.py pull 2016 gen  # to update
+python manage.py tarball 2016 miniaod
+python stageout
+```
+
