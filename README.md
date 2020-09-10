@@ -8,6 +8,7 @@ This is a small script to manage tarball generation. It relies on the `qondor` p
 virtualenv myenv
 source myenv/bin/activate
 pip install qondor
+git clone git@github.com:boostedsvj/svjproduction-tarballs.git
 ```
 
 ## Usage
