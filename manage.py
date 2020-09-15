@@ -10,21 +10,24 @@ TARBALLDIR = osp.join(THISDIR, 'tarballs')
 STAGEOUTDIR = 'root://cmseos.fnal.gov//store/user/lpcsusyhad/SVJ2017/boosted/svjproduction-tarballs'
 
 CMSSW_VERSION = {
-    2016 : {
+    '2016' : {
         'gen' : 'CMSSW_7_1_44',
         'miniaod' : 'CMSSW_8_0_28'
         },
-    2017 : {
+    '2017' : {
         'gen' : 'CMSSW_9_3_14',
         'miniaod' : 'CMSSW_9_4_10'
         },
-    2018 : {
+    '2018' : {
         'gen' : 'CMSSW_10_2_21',
         'miniaod' : 'CMSSW_10_2_21'
+        },
+    'treemaker' : {
+        'treemaker' : 'CMSSW_10_2_21'
         }
     }
 
-YEARS = [ 2016, 2017, 2018 ]
+YEARS = [ '2016', '2017', '2018' ]
 STEPS = [ 'gen', 'miniaod' ]
 
 
@@ -39,10 +42,13 @@ def iter_years_steps(years, steps):
     if qondor.utils.is_string(years): years = [years]
     if qondor.utils.is_string(steps): steps = [steps]
     if '*' in years: years = YEARS[:]
-    if '*' in steps: steps = STEPS[:]
+    if not steps is None and '*' in steps: steps = STEPS[:]
     for year in years:
+        if year == 'treemaker':
+            yield 'treemaker', 'treemaker'
+            continue
         for step in steps:
-            yield int(year), step
+            yield year, step
 
 SLVERSION = None
 def slversion():
@@ -63,14 +69,28 @@ def cmsswsrcdir(year, step):
 def svjproductiondir(year, step):
     return osp.join(cmsswsrcdir(year, step), 'SVJ/Production')
 
+def treemakerdir():
+    return osp.join(cmsswsrcdir('treemaker', 'treemaker'), 'TreeMaker')
+
+def packagedir(year, step=None):
+    return treemakerdir() if year == 'treemaker' else svjproductiondir(year, step)
+
 def setup(year, step):
     if not DRYMODE and not osp.isdir(yeardir(year)): os.makedirs(yeardir(year))
-    cmds = [
-        'cd {0}'.format(yeardir(year)),
-        'wget https://raw.githubusercontent.com/kpedro88/SVJProduction/master/setup.sh -O setup.sh',
-        'chmod +x setup.sh',
-        './setup.sh -c {0} -f boostedsvj -s ssh'.format(CMSSW_VERSION[year][step]),
-        ]
+    if year == 'treemaker':
+        cmds = [
+            'cd {0}'.format(yeardir(year)),
+            'wget https://raw.githubusercontent.com/TreeMaker/TreeMaker/Run2_2017/setup.sh',
+            'chmod +x setup.sh',
+            './setup.sh -f boostedsvj -b dev-ak15-rebased',
+            ]
+    else:
+        cmds = [
+            'cd {0}'.format(yeardir(year)),
+            'wget https://raw.githubusercontent.com/kpedro88/SVJProduction/master/setup.sh -O setup.sh',
+            'chmod +x setup.sh',
+            './setup.sh -c {0} -f boostedsvj -s ssh'.format(CMSSW_VERSION[year][step]),
+            ]
     qondor.utils.run_multiple_commands(cmds)
 
 def pull(year, step):
@@ -80,7 +100,7 @@ def pull(year, step):
         'source /cvmfs/cms.cern.ch/cmsset_default.sh',
         'cd {0}'.format(cmsswsrcdir(year, step)),
         'eval \'scram runtime -sh\'',
-        'cd {0}'.format(svjproductiondir(year, step)),
+        'cd {0}'.format(packagedir(year, step)),
         'git pull',
         'cd {0}'.format(cmsswsrcdir(year, step)),
         'scram b -j8',
@@ -92,12 +112,13 @@ def tarball_tag(year, step):
         commitid = '000000'
     else:
         commitid = qondor.utils.run_multiple_commands([
-            'cd {0}'.format(svjproductiondir(year, step)),
+            'cd {0}'.format(packagedir(year, step)),
             'git rev-parse --short HEAD'
             ])[0]
-    tag = '{0}_{1}_{2}_{3}_{4}'.format(
-        commitid, slversion(), step, year, time.strftime('%b%d')
-        )
+    if year == 'treemaker':
+        tag = '_'.join([commitid, slversion(), 'treemaker', time.strftime('%b%d')])
+    else:
+        tag = '_'.join([commitid, slversion(), step, year, time.strftime('%b%d')])
     return tag
 
 def make_tarball(year, step):
@@ -119,7 +140,7 @@ def make_tarball(year, step):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('action', type=str, choices=['setup', 'pull', 'tarball', 'stageout'], help='')
-    parser.add_argument('year', type=str, nargs='?', choices=[str(y) for y in YEARS] + ['*'], help='')
+    parser.add_argument('year', type=str, nargs='?', choices=[str(y) for y in YEARS] + ['treemaker', '*'], help='')
     parser.add_argument('step', type=str, nargs='?', choices=STEPS + ['*'], help='')
     parser.add_argument('-d', '--dry', action='store_true', help='')
     args = parser.parse_args()

@@ -1,4 +1,4 @@
-# Creating tarballs for the SVJ/Production package
+# Creating tarballs for the SVJ/Production and TreeMaker packages
 
 This is a small script to manage tarball generation. It relies on the `qondor` package being installed.
 
@@ -20,6 +20,7 @@ python manage.py setup 2016 miniaod
 python manage.py setup 2017 gen
 python manage.py setup 2017 miniaod
 python manage.py setup 2018 gen  # gen and miniaod are the same CMSSW version for 2018
+python manage.py setup treemaker
 ```
 
 To update existing CMSSW directories:
@@ -28,6 +29,7 @@ To update existing CMSSW directories:
 python manage.py pull 2016 miniaod
 python manage.py pull 2017 \*
 python manage.py pull 2018 \*
+python manage.py pull treemaker
 ```
 
 To create tarballs:
@@ -36,6 +38,7 @@ To create tarballs:
 python manage.py tarball 2016 miniaod
 python manage.py tarball 2017 \*
 python manage.py tarball 2018 \*
+python manage.py tarball treemaker
 ```
 
 To stageout all created tarballs:
