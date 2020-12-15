@@ -47,9 +47,25 @@ To stageout all created tarballs:
 python manage.py stageout
 ```
 
-### For 2016 GEN-SIM
+### For 2016 GEN-SIM and slc6 tarballs
 
-Be sure to login on an `el6` node, or use a singularity container.
+On the LPC, first setup the singularity container:
+
+```
+cmssw-slc6 -B /uscms_data/d3/klijnsma:/nobackup # Exchange with your own username, nobackup mount net strictly necessary
+```
+
+Install `qondor` (`virtualenv` is typically not available on `slc6`):
+
+```
+mkdir -p el6installs/bin
+mkdir -p el6installs/lib/python2.6/site-packages
+export PATH="${PWD}/el6installs/bin:${PATH}"
+export PYTHONPATH="${PWD}/el6installs/lib/python2.6/site-packages:${PYTHONPATH}"
+pip install --install-option="--prefix=${PWD}/el6installs" --no-cache-dir qondor
+```
+
+Then call the python script:
 
 ```
 python manage.py setup 2016 gen
@@ -57,4 +73,3 @@ python manage.py setup 2016 gen
 python manage.py tarball 2016 miniaod
 python stageout
 ```
-

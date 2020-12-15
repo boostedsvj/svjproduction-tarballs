@@ -54,7 +54,13 @@ SLVERSION = None
 def slversion():
     global SLVERSION
     if SLVERSION is None:
-        SLVERSION = 'el7' if 'el7' in os.uname()[2] else 'el6'
+        # Prefer to read from /etc/redhat-release; os.uname does not work in singularity image
+        try:
+            if osp.isfile('/etc/redhat-release'):
+                with open('/etc/redhat-release', 'r') as f:
+                    SLVERSION = 'el' + f.read().strip().split('release',1)[1].strip()[0]
+        except:
+            SLVERSION = 'el7' if 'el7' in os.uname()[2] else 'el6'
     return SLVERSION
 
 def yeardir(year):
@@ -78,12 +84,17 @@ def packagedir(year, step=None):
 def setup(year, step):
     if not DRYMODE and not osp.isdir(yeardir(year)): os.makedirs(yeardir(year))
     if year == 'treemaker':
-        cmds = [
+        qondor.utils.run_multiple_commands([
             'cd {0}'.format(yeardir(year)),
             'wget https://raw.githubusercontent.com/TreeMaker/TreeMaker/Run2_2017/setup.sh',
             'chmod +x setup.sh',
+            ])
+        if slversion() == 'el6':
+            duckpunch_el6_treemaker_setup(osp.join(yeardir('treemaker'), 'setup.sh'))
+        qondor.utils.run_multiple_commands([
+            'cd {0}'.format(yeardir(year)),
             './setup.sh -f boostedsvj -b dev-ak15-rebased',
-            ]
+            ])
     else:
         cmds = [
             'cd {0}'.format(yeardir(year)),
@@ -91,7 +102,23 @@ def setup(year, step):
             'chmod +x setup.sh',
             './setup.sh -c {0} -f boostedsvj -s ssh'.format(CMSSW_VERSION[year][step]),
             ]
-    qondor.utils.run_multiple_commands(cmds)
+        qondor.utils.run_multiple_commands(cmds)
+
+def duckpunch_el6_treemaker_setup(setup_file):
+    """
+    Duck-punches SLC_VERSION="slc6" in the setup script
+    """
+    print('WARNING: Duck-punching {0}'.format(setup_file))
+    with open(setup_file, 'r') as f:
+        setup = f.read()
+    # Insert
+    target_line = 'export SCRAM_ARCH=${SLC_VERSION}_amd64_${GCC_VERSION}'
+    setup = setup.replace(
+        target_line,
+        'export SLC_VERSION="slc6"\n' + target_line
+        )
+    with open(setup_file, 'w') as f:
+        f.write(setup)
 
 def pull(year, step):
     '''Pulls latest SVJ/Production from git and recompiles'''
