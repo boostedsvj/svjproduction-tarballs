@@ -93,7 +93,7 @@ def setup(year, step):
             duckpunch_el6_treemaker_setup(osp.join(yeardir('treemaker'), 'setup.sh'))
         qondor.utils.run_multiple_commands([
             'cd {0}'.format(yeardir(year)),
-            './setup.sh -f boostedsvj -b dev-ak15-rebased',
+            './setup.sh -f boostedsvj -b boosted-rebased',
             ])
     else:
         cmds = [
@@ -166,11 +166,39 @@ def make_tarball(year, step):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', type=str, choices=['setup', 'pull', 'tarball', 'stageout'], help='')
-    parser.add_argument('year', type=str, nargs='?', choices=[str(y) for y in YEARS] + ['treemaker', '*'], help='')
-    parser.add_argument('step', type=str, nargs='?', choices=STEPS + ['*'], help='')
-    parser.add_argument('-d', '--dry', action='store_true', help='')
+    parser.add_argument(
+        'action', type=str, choices=['setup', 'pull', 'tarball', 'stageout'],
+        help=(
+            'setup: Sets up a CMSSW environment; '
+            'pull: Updates an existing CMSSW environment; '
+            'tarball: Makes a tarball out of an existing CMSSW environment; '
+            'stageout: Copies all created tarballs to the storage element (at {0}) '
+            '(year and step arguments are ignored)'
+            .format(STAGEOUTDIR)
+            )
+        )
+    parser.add_argument(
+        'year', type=str, nargs='?', choices=[str(y) for y in YEARS] + ['treemaker', '*'],
+        help='Specify which year (each year may have different CMSSW versions)'
+        )
+    parser.add_argument(
+        'step', type=str, nargs='?', choices=STEPS + ['*'],
+        help='Specify which step (different steps may have different CMSSW versions)'
+        )
+    parser.add_argument(
+        '-o', '--out', type=str,
+        help='Path to where CMSSW should be set up (default is where this script is)'
+        )
+    parser.add_argument(
+        '-d', '--dry', action='store_true',
+        help='Only prints what would be done, but does not run anything'
+        )
     args = parser.parse_args()
+
+    if args.out:
+        global THISDIR
+        THISDIR = osp.abspath(args.out)
+        qondor.logger.info('Working directory: %s', THISDIR)
 
     if args.dry: drymode()
 
