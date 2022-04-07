@@ -20,6 +20,7 @@ python manage.py setup 2016 miniaod
 python manage.py setup 2017 gen
 python manage.py setup 2017 miniaod
 python manage.py setup 2018 gen  # gen and miniaod are the same CMSSW version for 2018
+python manage.py setup 2018UL miniaod  # UL
 python manage.py setup treemaker
 ```
 

@@ -1,7 +1,7 @@
 """
 Script to manage SVJProduction tarball making
 """
-
+from __future__ import print_function
 import qondor, seutils
 import os.path as osp, os, glob, argparse, time, shutil
 
@@ -22,12 +22,16 @@ CMSSW_VERSION = {
         'gen' : 'CMSSW_10_2_21',
         'miniaod' : 'CMSSW_10_2_21'
         },
+    '2018UL' : {
+        'gen' : 'CMSSW_10_6_29_patch1',
+        'miniaod' : 'CMSSW_10_6_29_patch1'
+        },
     'treemaker' : {
         'treemaker' : 'CMSSW_10_2_21'
         }
     }
 
-YEARS = [ '2016', '2017', '2018' ]
+YEARS = [ '2016', '2017', '2018', '2018UL' ]
 STEPS = [ 'gen', 'miniaod' ]
 
 
@@ -93,14 +97,20 @@ def setup(year, step):
             duckpunch_el6_treemaker_setup(osp.join(yeardir('treemaker'), 'setup.sh'))
         qondor.utils.run_multiple_commands([
             'cd {0}'.format(yeardir(year)),
-            './setup.sh -f boostedsvj -b boosted-rebased',
+            './setup.sh -f boostedsvj -b boosted_rebased',
             ])
     else:
+        if 'UL' in year:
+            setuppy = 'https://raw.githubusercontent.com/cms-svj/SVJProduction/master/setup.sh'
+            fork = ''
+        else:
+            setuppy = 'https://raw.githubusercontent.com/kpedro88/SVJProduction/master/setup.sh'
+            fork = '-f boostedsvj'
         cmds = [
             'cd {0}'.format(yeardir(year)),
-            'wget https://raw.githubusercontent.com/kpedro88/SVJProduction/master/setup.sh -O setup.sh',
+            'wget {0} -O setup.sh'.format(setuppy),
             'chmod +x setup.sh',
-            './setup.sh -c {0} -f boostedsvj -s ssh'.format(CMSSW_VERSION[year][step]),
+            './setup.sh -c {0} {1} -s ssh'.format(CMSSW_VERSION[year][step], fork),
             ]
         qondor.utils.run_multiple_commands(cmds)
 
@@ -164,10 +174,27 @@ def make_tarball(year, step):
     qondor.logger.info('Updating %s -> %s', tarball, dst)
     if not DRYMODE: shutil.copyfile(tarball, dst)
 
+def status(year, step=None):
+    pdir = packagedir(year, step)
+    if not osp.isdir(pdir):
+        status_text = 'Not setup: {} {}'.format(year, step)
+    else:
+        last_commit = qondor.utils.run_multiple_commands([
+            'cd {}'.format(pdir),
+            'git rev-parse --abbrev-ref HEAD',
+            'git log -n 1'
+            ])
+        status_text = (
+            qondor.colored('\n' + pdir + ':', 'yellow')
+            + '\n  ' + '\n  '.join(last_commit)
+            )
+    print(status_text)
+    return status_text
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'action', type=str, choices=['setup', 'pull', 'tarball', 'stageout'],
+        'action', type=str, choices=['setup', 'pull', 'tarball', 'stageout', 'status'],
         help=(
             'setup: Sets up a CMSSW environment; '
             'pull: Updates an existing CMSSW environment; '
@@ -220,6 +247,8 @@ def main():
             pull(year, step)
         elif args.action == 'tarball':
             make_tarball(year, step)
+        elif args.action == 'status':
+            status(year, step)
 
 
 
